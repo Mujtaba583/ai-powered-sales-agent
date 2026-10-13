@@ -10,6 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+export default app;
 const port = parseInt(process.env.PORT || '3000', 10);
 
 app.use(express.json());
@@ -455,4 +456,7 @@ async function startServer() {
   });
 }
 
-startServer();
+// Vercel imports this app as a serverless function; only start a listener locally.
+if (!process.env.VERCEL) {
+  startServer();
+}
