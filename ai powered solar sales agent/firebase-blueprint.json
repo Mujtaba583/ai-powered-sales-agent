@@ -1,0 +1,105 @@
+{
+  "entities": {
+    "Lead": {
+      "title": "Lead",
+      "description": "Customer solar inquiry or site survey lead captured from voice assistant, quote modal, or CRM dashboard",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 150
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 50
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 150
+        },
+        "product": {
+          "type": "string",
+          "maxLength": 150
+        },
+        "status": {
+          "type": "string",
+          "enum": ["New", "Hot", "Warm", "Closed"]
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "city": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "address": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "timestamp": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "value": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "estimatedKw": {
+          "type": "number"
+        },
+        "capturedBy": {
+          "type": "string",
+          "maxLength": 128
+        }
+      },
+      "required": ["id", "name", "phone", "product", "status"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Sales agent or administrator profile",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 150
+        },
+        "displayName": {
+          "type": "string",
+          "maxLength": 150
+        },
+        "businessName": {
+          "type": "string",
+          "maxLength": 150
+        },
+        "role": {
+          "type": "string",
+          "enum": ["sales_agent", "admin"]
+        }
+      },
+      "required": ["id", "email"]
+    }
+  },
+  "firestore": {
+    "/leads/{leadId}": {
+      "schema": {
+        "$ref": "#/entities/Lead"
+      },
+      "description": "Solar sales inquiries and CRM leads"
+    },
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "CRM user accounts and sales agent profiles"
+    }
+  }
+}
