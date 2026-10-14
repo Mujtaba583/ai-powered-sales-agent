@@ -1,19 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChatMessage, Lead } from '../types';
 import { extractLeadFromConversation } from '../services/crmStorage';
+import { generateSolarAdvisorResponse } from '../services/solarAdvisorEngine';
 
 interface VoiceAssistantViewProps {
   onLeadCaptured: (lead: Lead) => void;
   initialProductContext?: string | null;
   onClearProductContext?: () => void;
 }
-
-const aiResponses = [
-  'That sounds like a great requirement! Our solar panel solutions offer up to 25 years of warranty. May I know your name and contact number to arrange a final quota for you?',
-  'For this scale, net metering will help you send excess electricity back to the grid and reduce your bill to zero. Can you share your phone number so our technical advisor can contact you?',
-  'Perfect! We offer flexible installment plans for 5kW, 10kW, and 15kW packages. Please share your email address or phone number so I can register a slot for you?',
-  'I have noted down your interest. Please share your full name and phone number so our team can execute a structural survey of your site.',
-];
 
 export const VoiceAssistantView: React.FC<VoiceAssistantViewProps> = ({
   onLeadCaptured,
@@ -46,7 +40,7 @@ export const VoiceAssistantView: React.FC<VoiceAssistantViewProps> = ({
       const msg: ChatMessage = {
         id: `agent-ctx-${Date.now()}`,
         sender: 'agent',
-        text: `Regarding the ${initialProductContext}: It is one of our most popular high-efficiency systems with 25-year warranty. Would you like an itemized price quotation or arrange a free rooftop survey?`,
+        text: `Regarding the ${initialProductContext}: It is one of our top turnkey solar systems with Tier-1 bifacial panels and 25-year warranty. What is your average monthly electricity bill or city?`,
         timestamp: 'Just now',
       };
       setMessages((prev) => [...prev, msg]);
@@ -67,7 +61,7 @@ export const VoiceAssistantView: React.FC<VoiceAssistantViewProps> = ({
     }
   };
 
-  // Speech Recognition setup
+  // Speech Recognition setup (Web Speech API)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SpeechRecognition =
@@ -95,9 +89,12 @@ export const VoiceAssistantView: React.FC<VoiceAssistantViewProps> = ({
             }
           };
 
-          rec.onerror = () => {
+          rec.onerror = (e: any) => {
             setIsListening(false);
             setStatusText('Online');
+            if (e.error === 'not-allowed') {
+              console.warn('Microphone permission not granted.');
+            }
           };
 
           rec.onend = () => {
@@ -149,14 +146,16 @@ export const VoiceAssistantView: React.FC<VoiceAssistantViewProps> = ({
     setTimeout(() => {
       setIsListening(false);
       setStatusText('Online');
-      const voicePhrases = [
-        'I want a quote for 10kW solar system my number is 03001234567',
-        'What is the total package price with battery backup?',
-        'My name is Ahmed, arrange a call back for industrial net metering',
+      const sampleQueries = [
+        'My monthly electricity bill is 45,000 PKR, which solar system should I install?',
+        'How much does a 5kW hybrid solar system cost in Pakistan?',
+        'How many inverter ACs can run on a 5kW solar system?',
+        'How does net metering work with WAPDA and K-Electric?',
+        'Do you provide lithium battery backup for load shedding?',
       ];
-      const simulatedVoice = voicePhrases[Math.floor(Math.random() * voicePhrases.length)];
-      handleSend(simulatedVoice);
-    }, 1500);
+      const selected = sampleQueries[Math.floor(Math.random() * sampleQueries.length)];
+      handleSend(selected);
+    }, 1200);
   };
 
   const handleSend = async (customText?: string) => {
@@ -176,7 +175,11 @@ export const VoiceAssistantView: React.FC<VoiceAssistantViewProps> = ({
     setIsProcessing(true);
     setStatusText('Typing...');
 
+    // Extract lead locally
     const localLead = extractLeadFromConversation(text, updatedHistory, initialProductContext);
+
+    // Prepare intelligent fallback reply in advance
+    const intelligentAdvisor = generateSolarAdvisorResponse(text, initialProductContext, updatedHistory);
 
     try {
       const controller = new AbortController();
@@ -194,7 +197,9 @@ export const VoiceAssistantView: React.FC<VoiceAssistantViewProps> = ({
       clearTimeout(timeoutId);
 
       const data = await res.json();
-      const reply = data.reply || aiResponses[Math.floor(Math.random() * aiResponses.length)];
+      const reply = data.reply && !data.reply.includes('Thank you for reaching out! We provide turnkey solar packages across Pakistan with Tier-1 panels')
+        ? data.reply
+        : intelligentAdvisor.reply;
 
       const agentMsg: ChatMessage = {
         id: `agent-${Date.now()}`,
@@ -206,13 +211,27 @@ export const VoiceAssistantView: React.FC<VoiceAssistantViewProps> = ({
       setMessages((prev) => [...prev, agentMsg]);
       setStatusText('Online');
 
-      const leadToSave = data.capturedLead || localLead;
-      if (leadToSave) {
+      const leadToSave = data.capturedLead || (intelligentAdvisor.leadData ? {
+        id: `lead-${Date.now()}`,
+        name: intelligentAdvisor.leadData.name || 'Valued Customer',
+        phone: intelligentAdvisor.leadData.phone || '',
+        email: 'customer@solar-lead.com',
+        product: intelligentAdvisor.leadData.product || 'Solar Consultation',
+        status: intelligentAdvisor.leadData.status || 'Hot',
+        note: intelligentAdvisor.leadData.note || '',
+        city: intelligentAdvisor.leadData.city || 'Pakistan',
+        address: '',
+        timestamp: 'Just now',
+        value: 'PKR 1.35M',
+        estimatedKw: 5,
+      } : localLead);
+
+      if (leadToSave && leadToSave.phone) {
         onLeadCaptured(leadToSave);
       }
       speakText(reply);
     } catch {
-      const fallbackReply = aiResponses[Math.floor(Math.random() * aiResponses.length)];
+      const fallbackReply = intelligentAdvisor.reply;
       const fallbackMsg: ChatMessage = {
         id: `agent-${Date.now()}`,
         sender: 'agent',
@@ -223,7 +242,7 @@ export const VoiceAssistantView: React.FC<VoiceAssistantViewProps> = ({
       setMessages((prev) => [...prev, fallbackMsg]);
       setStatusText('Online');
 
-      if (localLead) {
+      if (localLead && localLead.phone) {
         onLeadCaptured(localLead);
       }
       speakText(fallbackReply);
@@ -266,7 +285,7 @@ export const VoiceAssistantView: React.FC<VoiceAssistantViewProps> = ({
                   {isListening ? 'Listening...' : 'Tap the microphone to start'}
                 </h2>
                 <p className="console-copy" data-console-copy>
-                  The assistant can answer solar product questions.
+                  {isListening ? 'Speak your solar question now' : 'The assistant can answer solar product questions.'}
                 </p>
                 <div className="quick-prompts" aria-label="Sample prompts">
                   <button
