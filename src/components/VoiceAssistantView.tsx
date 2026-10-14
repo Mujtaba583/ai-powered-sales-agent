@@ -303,7 +303,7 @@ export const VoiceAssistantView: React.FC<VoiceAssistantViewProps> = ({
               <div>
                 <h2>Live conversation</h2>
                 <span style={{ color: 'var(--muted)', fontSize: '.9rem' }}>
-                  Demo assistant response flow
+                  Get assistance regarding solar panels
                 </span>
               </div>
               <span className="status-dot" data-assistant-status>
