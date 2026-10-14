@@ -32,7 +32,7 @@ export const SOLAR_PRODUCTS: SolarProduct[] = [
     badge: 'Most Popular',
     badgeType: 'amber',
     icon: '⚡',
-    description: 'Pakistan\'s top-selling residential solar package. Delivers high daily electricity bill savings with net metering and night battery backup support.',
+    description: "Pakistan's top-selling residential solar package. Delivers high daily electricity bill savings with net metering and night battery backup support.",
     bestFor: 'Medium homes (3-4 bedrooms)',
     priceRange: 'PKR 1.2M - 1.45M',
     priceNumeric: 1350000,
@@ -68,6 +68,7 @@ export const SOLAR_PRODUCTS: SolarProduct[] = [
       warranty: '30 Years Bifacial Panel Warranty, 5 Years Inverter Warranty',
     },
   },
+
   // --- TURNKEY COMMERCIAL PACKAGES ---
   {
     id: '10kw-business',
@@ -113,6 +114,7 @@ export const SOLAR_PRODUCTS: SolarProduct[] = [
       warranty: '30 Years Performance Guarantee, 5 Years Inverter Warranty',
     },
   },
+
   // --- SOLAR BACKUP & LOAD SHEDDING SOLUTIONS ---
   {
     id: 'battery-inverter',
@@ -136,6 +138,7 @@ export const SOLAR_PRODUCTS: SolarProduct[] = [
       warranty: '5 Years Battery Cycle Warranty, 2 Years Inverter Warranty',
     },
   },
+
   // --- REAL PAKISTANI SOLAR PANELS (TIER-1) ---
   {
     id: 'longi-himo6-585w',
@@ -144,8 +147,8 @@ export const SOLAR_PRODUCTS: SolarProduct[] = [
     brand: 'Longi Solar',
     badge: 'Tier-1 Best Seller',
     badgeType: 'primary',
-    icon: '🔆',
-    description: 'Pakistan\'s leading solar panel. HPBC high-efficiency cell technology with exceptional heat tolerance and low degradation in Pakistani summers.',
+    icon: '☀️',
+    description: "Pakistan's leading solar panel. HPBC high-efficiency cell technology with exceptional heat tolerance and low degradation in Pakistani summers.",
     bestFor: 'Residential & Commercial Rooftops',
     priceRange: 'PKR 18,200 / Panel (~PKR 31.1/W)',
     priceNumeric: 18200,
@@ -164,7 +167,7 @@ export const SOLAR_PRODUCTS: SolarProduct[] = [
     brand: 'Jinko Solar',
     badge: 'Bifacial TOPCon',
     badgeType: 'amber',
-    icon: '☀️',
+    icon: '✨',
     description: 'Bifacial double-glass module capturing sunlight from both front and rear. Up to 25% bifacial gain with zero light-induced degradation (LID).',
     bestFor: 'High-Yield Rooftops & Ground Mounts',
     priceRange: 'PKR 18,800 / Panel (~PKR 32.1/W)',
@@ -177,6 +180,7 @@ export const SOLAR_PRODUCTS: SolarProduct[] = [
       applianceLoad: 'SMBB Half-Cut Technology with ultra-low degradation',
     },
   },
+
   // --- REAL PAKISTANI SOLAR INVERTERS ---
   {
     id: 'inverex-nitrox-10kw',
@@ -185,8 +189,8 @@ export const SOLAR_PRODUCTS: SolarProduct[] = [
     brand: 'Inverex Solar',
     badge: 'Top Seller Inverter',
     badgeType: 'amber',
-    icon: '🔌',
-    description: 'Pakistan\'s premier hybrid solar inverter with color touchscreen, Dual MPPT, IP65 waterproof casing, generator auto-start, and mobile Wi-Fi monitoring.',
+    icon: '⚡',
+    description: "Pakistan's premier hybrid solar inverter with color touchscreen, Dual MPPT, IP65 waterproof casing, generator auto-start, and mobile Wi-Fi monitoring.",
     bestFor: '10kW Net Metering Homes & Commercial',
     priceRange: 'PKR 485,000',
     priceNumeric: 485000,
@@ -220,6 +224,7 @@ export const SOLAR_PRODUCTS: SolarProduct[] = [
       applianceLoad: 'Runs 2 ACs, water motor, refrigerators simultaneously',
     },
   },
+
   // --- REAL PAKISTANI ENERGY STORAGE & LITHIUM BATTERIES ---
   {
     id: 'felicity-5kwh-lithium',
@@ -248,8 +253,8 @@ export const SOLAR_PRODUCTS: SolarProduct[] = [
     brand: 'Phoenix',
     badge: 'Budget Tubular',
     badgeType: 'neutral',
-    icon: '🪫',
-    description: 'Pakistan\'s trusted deep-cycle flooded tubular battery for solar and UPS systems. Heavy thick plates for prolonged life during frequent outages.',
+    icon: '🔋',
+    description: "Pakistan's trusted deep-cycle flooded tubular battery for solar and UPS systems. Heavy thick plates for prolonged life during frequent outages.",
     bestFor: 'Affordable backup for homes on a budget',
     priceRange: 'PKR 68,000 / Battery',
     priceNumeric: 68000,

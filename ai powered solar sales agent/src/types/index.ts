@@ -1,5 +1,13 @@
 export type LeadStatus = 'Hot' | 'Warm' | 'New' | 'Closed';
 
+export interface ChatMessage {
+  id: string;
+  sender: 'agent' | 'customer';
+  text: string;
+  timestamp: string;
+  isVoice?: boolean;
+}
+
 export interface Lead {
   id: string;
   name: string;
@@ -14,6 +22,7 @@ export interface Lead {
   value?: string;
   estimatedKw?: number;
   conversationHistory?: ChatMessage[];
+  capturedBy?: string;
 }
 
 export type ProductCategory =
@@ -47,14 +56,6 @@ export interface SolarProduct {
     efficiency?: string;
     capacity?: string;
   };
-}
-
-export interface ChatMessage {
-  id: string;
-  sender: 'agent' | 'customer';
-  text: string;
-  timestamp: string;
-  isVoice?: boolean;
 }
 
 export interface LeadStats {

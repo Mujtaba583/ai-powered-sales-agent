@@ -138,13 +138,16 @@ export const ProductsView: React.FC<ProductsViewProps> = ({ onTalkToAgent }) => 
                     <strong>{prod.price}</strong>
                   </div>
                 </div>
-                <button
-                  type="button"
+                <a
                   className="btn btn-soft"
-                  onClick={() => onTalkToAgent(prod.name)}
+                  href="assistant.html"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onTalkToAgent(prod.name);
+                  }}
                 >
                   Talk to Agent
-                </button>
+                </a>
               </article>
             ))}
           </div>

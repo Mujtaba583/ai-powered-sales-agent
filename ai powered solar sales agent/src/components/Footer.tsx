@@ -1,17 +1,28 @@
 import React from 'react';
 
 interface FooterProps {
+  currentTab?: string;
   onNavigate: (tab: string) => void;
 }
 
-export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
+export const Footer: React.FC<FooterProps> = ({ currentTab = 'home', onNavigate }) => {
+  if (currentTab !== 'home') {
+    return (
+      <footer className="site-footer">
+        <div className="container footer-bottom">
+          <span>&copy; 2026 AI Sales Agent.</span>
+        </div>
+      </footer>
+    );
+  }
+
   return (
     <footer className="site-footer">
       <div className="container footer-grid">
         <div>
           <div className="footer-brand">
             <span className="brand-mark">
-              <img src="/assets/logo-icon.png" alt="AI Sales Agent logo" />
+              <img src="assets/logo-icon.png" alt="AI Sales Agent logo" />
             </span>
             <strong>AI Sales Agent</strong>
           </div>
@@ -20,7 +31,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <h3>Pages</h3>
           <div className="footer-links">
             <a
-              href="#"
+              href="assistant.html"
               onClick={(e) => {
                 e.preventDefault();
                 onNavigate('assistant');
@@ -29,7 +40,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               Voice Assistant
             </a>
             <a
-              href="#"
+              href="products.html"
               onClick={(e) => {
                 e.preventDefault();
                 onNavigate('products');
@@ -38,7 +49,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               Products
             </a>
             <a
-              href="#"
+              href="dashboard.html"
               onClick={(e) => {
                 e.preventDefault();
                 onNavigate('dashboard');
@@ -52,7 +63,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
           <h3>Account</h3>
           <div className="footer-links">
             <a
-              href="#"
+              href="login.html"
               onClick={(e) => {
                 e.preventDefault();
                 onNavigate('login');
@@ -61,7 +72,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               Login
             </a>
             <a
-              href="#"
+              href="signup.html"
               onClick={(e) => {
                 e.preventDefault();
                 onNavigate('signup');
@@ -73,7 +84,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
         </div>
       </div>
       <div className="container footer-bottom">
-        <span>© 2026 AI Sales Agent.</span>
+        <span>&copy; 2026 AI Sales Agent.</span>
       </div>
     </footer>
   );

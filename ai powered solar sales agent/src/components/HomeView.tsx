@@ -17,20 +17,22 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
               Our AI Sales Agent helps customers to ask questions by voice, understand solar panel packages easily.
             </p>
             <div className="hero-actions">
-              <button
-                type="button"
+              <a
                 className="btn btn-primary"
-                onClick={() => onNavigate('assistant')}
+                href="assistant.html"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onNavigate('assistant');
+                }}
               >
                 Try Voice Assistant
-              </button>
+              </a>
             </div>
             <div className="stat-strip" aria-label="Product highlights"></div>
           </div>
-
           <div className="home-visual" aria-label="AI voice assistant preview">
             <div className="voice-orb-card">
-              <div className="card-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="card-top">
                 <div className="ai-profile"></div>
                 <span className="status-dot">Online</span>
               </div>
@@ -41,7 +43,7 @@ export const HomeView: React.FC<HomeViewProps> = ({ onNavigate }) => {
                 title="Tap to try Voice Assistant"
               >
                 <div className="orb" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" style={{ width: '42px', height: '42px' }}>
+                  <svg viewBox="0 0 24 24" fill="none">
                     <path
                       d="M12 14.5a3.5 3.5 0 0 0 3.5-3.5V6a3.5 3.5 0 1 0-7 0v5a3.5 3.5 0 0 0 3.5 3.5Z"
                       stroke="currentColor"

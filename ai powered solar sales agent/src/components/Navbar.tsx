@@ -7,7 +7,12 @@ interface NavbarProps {
   onLogout?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, user, onLogout }) => {
+export const Navbar: React.FC<NavbarProps> = ({
+  currentTab,
+  setCurrentTab,
+  user,
+  onLogout,
+}) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleNavClick = (tab: string) => {
@@ -21,7 +26,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, user,
       <div className="container-wide navbar">
         <a
           className="brand"
-          href="#"
+          href="index.html"
           onClick={(e) => {
             e.preventDefault();
             handleNavClick('home');
@@ -29,7 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, user,
           aria-label="AI Sales Agent home"
         >
           <span className="brand-mark">
-            <img src="/assets/logo-icon.png" alt="AI Sales Agent logo" />
+            <img src="assets/logo-icon.png" alt="AI Sales Agent logo" />
           </span>
           <span className="brand-copy">
             <span className="brand-title">AI Sales Agent</span>
@@ -37,10 +42,14 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, user,
           </span>
         </a>
 
-        <nav className={`nav-links ${mobileMenuOpen ? 'open' : ''}`} aria-label="Main navigation">
+        <nav
+          className={`nav-links ${mobileMenuOpen ? 'open' : ''}`}
+          data-nav-links
+          aria-label="Main navigation"
+        >
           <a
-            href="#"
             className={currentTab === 'home' ? 'active' : ''}
+            href="index.html"
             onClick={(e) => {
               e.preventDefault();
               handleNavClick('home');
@@ -49,8 +58,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, user,
             Home
           </a>
           <a
-            href="#"
             className={currentTab === 'assistant' ? 'active' : ''}
+            href="assistant.html"
             onClick={(e) => {
               e.preventDefault();
               handleNavClick('assistant');
@@ -59,8 +68,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, user,
             Voice Assistant
           </a>
           <a
-            href="#"
             className={currentTab === 'products' ? 'active' : ''}
+            href="products.html"
             onClick={(e) => {
               e.preventDefault();
               handleNavClick('products');
@@ -69,8 +78,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, user,
             Products
           </a>
           <a
-            href="#"
             className={currentTab === 'dashboard' ? 'active' : ''}
+            href="dashboard.html"
             onClick={(e) => {
               e.preventDefault();
               handleNavClick('dashboard');
@@ -80,7 +89,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, user,
           </a>
         </nav>
 
-        <div className={`nav-actions ${mobileMenuOpen ? 'open' : ''}`}>
+        <div className={`nav-actions ${mobileMenuOpen ? 'open' : ''}`} data-nav-actions>
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span
@@ -108,8 +117,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, user,
           ) : (
             <>
               <a
-                href="#"
                 className={`btn btn-ghost ${currentTab === 'login' ? 'active' : ''}`}
+                href="login.html"
                 onClick={(e) => {
                   e.preventDefault();
                   handleNavClick('login');
@@ -118,8 +127,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, user,
                 Login
               </a>
               <a
-                href="#"
                 className={`btn btn-primary ${currentTab === 'signup' ? 'active' : ''}`}
+                href="signup.html"
                 onClick={(e) => {
                   e.preventDefault();
                   handleNavClick('signup');
@@ -134,6 +143,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentTab, setCurrentTab, user,
         <button
           className="nav-toggle"
           type="button"
+          data-nav-toggle
           aria-label="Toggle menu"
           aria-expanded={mobileMenuOpen}
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
