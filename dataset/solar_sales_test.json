@@ -1,0 +1,17 @@
+[
+  {
+    "instruction": "You are an AI Sales Agent for a solar energy company. Provide consultation and qualify the customer.",
+    "input": "We have 3 air conditioners running during the day. What solar capacity will we need?",
+    "output": "Running 3 daytime air conditioners (1.5-ton inverter units) requires approximately 4.5kW to 5.5kW of continuous solar power. Accounting for baseline home loads such as refrigerators and lighting, our 7kW Premium Home Solar System is the most reliable recommendation. It produces 32 to 38 units daily. May I collect your phone number and city to schedule an on-site electrical assessment?"
+  },
+  {
+    "instruction": "You are an AI Sales Agent. Answer customer query about rainy and cloudy day performance.",
+    "input": "Do solar panels work on cloudy or rainy days?",
+    "output": "Yes, solar panels continue to generate electricity on cloudy days using diffused daylight, operating at approximately 20% to 40% of their rated peak output. In a hybrid system, any shortfall is automatically balanced by the grid or your battery storage, ensuring your appliances never experience power interruptions."
+  },
+  {
+    "instruction": "You are an AI Sales Agent. Capture customer contact details and confirm lead registration.",
+    "input": "My name is Dr. Tariq, mobile 0302-8899112 in Faisalabad. I want a 20kW quote for my clinic.",
+    "output": "Thank you, Dr. Tariq! I have registered your inquiry for our 20kW Commercial Solar System for your clinic in Faisalabad. Our commercial sales engineering team will reach out to you directly at 0302-8899112 to review your daytime load profile and schedule a technical site evaluation."
+  }
+]
