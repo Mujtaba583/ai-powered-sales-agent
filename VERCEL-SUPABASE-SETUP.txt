@@ -1,0 +1,24 @@
+AI SALES AGENT - VERCEL + SUPABASE SETUP
+
+1) Create a Supabase project at https://supabase.com/dashboard.
+2) Open Supabase SQL Editor. Paste the complete contents of supabase-schema.sql and click Run.
+3) In Supabase Project Settings > API, copy the Project URL and the service_role (secret) key. Keep the key private.
+4) In Vercel Project > Settings > Environment Variables, add:
+   GEMINI_API_KEY = your Google Gemini API key
+   SUPABASE_URL = your Supabase Project URL
+   SUPABASE_SERVICE_ROLE_KEY = your Supabase service_role/secret key
+   Apply to Production, Preview and Development as needed.
+5) In Vercel, import this repository. Root Directory must be the folder containing package.json.
+   Build Command: npm run build
+   Output Directory: dist
+   Install Command: npm install
+6) Deploy. After adding/changing environment variables, redeploy.
+7) Test /, /api/leads, /api/stats, signup/login and AI chat. Demo login: admin@solarsales.com / solar123.
+
+IMPORTANT
+- Never put SUPABASE_SERVICE_ROLE_KEY in frontend code or any VITE_ variable.
+- Leads and app-created accounts persist in Supabase when both Supabase variables are configured.
+- The app's current login is a simple custom login flow, not Supabase Auth; do not use it for sensitive production accounts without adding proper sessions/authorization.
+- Gemini chat requires a valid GEMINI_API_KEY and may incur Google API charges.
+- TinyLlama training files are included for research; the deployed chat uses Gemini, not the local TinyLlama model.
+- The Python backend is separate and is not deployed by this Vercel setup.

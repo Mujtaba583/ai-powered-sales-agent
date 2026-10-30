@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 
@@ -152,7 +153,77 @@ function persistLeadsToDisk() {
   }
 }
 
+
 let leadsDatabase: ServerLead[] = loadLeadsFromDisk();
+
+// Supabase REST persistence. The service-role key is server-side only.
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+async function supabaseRequest(pathname: string, init: RequestInit = {}) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.');
+  }
+  const response = await fetch(`${SUPABASE_URL.replace(/\/$/, '')}/rest/v1/${pathname}`, {
+    ...init,
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      ...(init.headers || {}),
+    },
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Supabase request failed (${response.status}): ${detail}`);
+  }
+  if (response.status === 204) return null;
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+}
+
+async function getStoredLeads(): Promise<ServerLead[]> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return leadsDatabase;
+  const rows = await supabaseRequest('leads?select=id,data&order=created_at.desc') as { id: string; data: ServerLead }[];
+  if (!rows.length) {
+    // Seed the database once with the project's existing demo leads.
+    for (const lead of defaultLeads) await saveStoredLead(lead);
+    return [...defaultLeads];
+  }
+  return rows.map((row) => row.data);
+}
+
+async function saveStoredLead(lead: ServerLead): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    leadsDatabase = [lead, ...leadsDatabase.filter((item) => item.id !== lead.id)];
+    persistLeadsToDisk();
+    return;
+  }
+  await supabaseRequest('leads?on_conflict=id', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({ id: lead.id, data: lead }),
+  });
+}
+
+async function updateStoredLead(id: string, patch: Partial<ServerLead>): Promise<ServerLead | null> {
+  const leads = await getStoredLeads();
+  const current = leads.find((lead) => lead.id === id);
+  if (!current) return null;
+  const updated = { ...current, ...patch, id };
+  await saveStoredLead(updated);
+  return updated;
+}
+
+async function deleteStoredLead(id: string): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    leadsDatabase = leadsDatabase.filter((lead) => lead.id !== id);
+    persistLeadsToDisk();
+    return;
+  }
+  await supabaseRequest(`leads?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
+}
+
 
 // Intelligent context-aware solar expert knowledge engine (Pakistan market)
 function getSmartSolarExpertReply(
@@ -397,151 +468,134 @@ function getSmartSolarExpertReply(
   };
 }
 
-// In-memory + persistent database for users and leads
-interface ServerUser {
-  id: string;
-  name: string;
-  email: string;
-  passwordHash: string;
-  createdAt: string;
+// Authentication accounts are stored in Supabase when configured.
+interface ServerUser { id: string; name: string; email: string; passwordHash: string; createdAt: string; }
+const usersDatabase: ServerUser[] = [];
+
+function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+function verifyPassword(password: string, stored: string): boolean {
+  const [salt, hash] = stored.split(':');
+  if (!salt || !hash) return false;
+  const actual = crypto.scryptSync(password, salt, 64);
+  const expected = Buffer.from(hash, 'hex');
+  return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+}
+async function findUserByEmail(email: string): Promise<ServerUser | null> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) return usersDatabase.find((u) => u.email === email) || null;
+  const rows = await supabaseRequest(`user_accounts?select=id,name,email,password_hash,created_at&email=eq.${encodeURIComponent(email)}&limit=1`) as any[];
+  return rows[0] ? { id: rows[0].id, name: rows[0].name, email: rows[0].email, passwordHash: rows[0].password_hash, createdAt: rows[0].created_at } : null;
+}
+async function createUser(user: ServerUser): Promise<void> {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) { usersDatabase.push(user); return; }
+  await supabaseRequest('user_accounts', { method: 'POST', headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({ id: user.id, name: user.name, email: user.email, password_hash: user.passwordHash }) });
+}
+async function ensureDemoAdmin(): Promise<void> {
+  const existing = await findUserByEmail('admin@solarsales.com');
+  if (!existing) await createUser({ id: 'user-demo-1', name: 'Admin Owner', email: 'admin@solarsales.com', passwordHash: hashPassword('solar123'), createdAt: new Date().toISOString() });
 }
 
-const usersDatabase: ServerUser[] = [
-  {
-    id: 'user-demo-1',
-    name: 'Admin Owner',
-    email: 'admin@solarsales.com',
-    passwordHash: 'solar123',
-    createdAt: new Date().toISOString(),
-  },
-];
-
-// Auth: Signup Endpoint
-app.post('/api/auth/signup', (req: Request, res: Response) => {
-  const { name, email, password } = req.body;
-  if (!name || !email || !password) {
-    return res.status(400).json({ error: 'Name, email, and password are required' });
-  }
-
-  const existing = usersDatabase.find((u) => u.email.toLowerCase() === email.toLowerCase());
-  if (existing) {
-    return res.status(400).json({ error: 'An account with this email already exists' });
-  }
-
-  const newUser: ServerUser = {
-    id: `user-${Date.now()}`,
-    name,
-    email: email.toLowerCase(),
-    passwordHash: password,
-    createdAt: new Date().toISOString(),
-  };
-
-  usersDatabase.push(newUser);
-  res.status(201).json({
-    success: true,
-    user: { id: newUser.id, name: newUser.name, email: newUser.email },
-    message: 'Account created successfully',
-  });
+app.post('/api/auth/signup', async (req: Request, res: Response) => {
+  try {
+    const { name, email, password } = req.body;
+    if (!name || !email || !password || String(password).length < 8) {
+      return res.status(400).json({ error: 'Name, email, and a password of at least 8 characters are required.' });
+    }
+    const normalizedEmail = String(email).trim().toLowerCase();
+    if (await findUserByEmail(normalizedEmail)) return res.status(400).json({ error: 'An account with this email already exists' });
+    const user: ServerUser = { id: `user-${crypto.randomUUID()}`, name: String(name).trim(), email: normalizedEmail, passwordHash: hashPassword(String(password)), createdAt: new Date().toISOString() };
+    await createUser(user);
+    res.status(201).json({ success: true, user: { id: user.id, name: user.name, email: user.email }, message: 'Account created successfully' });
+  } catch (error) { console.error('Signup failed:', error); res.status(500).json({ error: 'Could not create account. Check database configuration.' }); }
 });
 
-// Auth: Login Endpoint
-app.post('/api/auth/login', (req: Request, res: Response) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
-  }
-
-  const user = usersDatabase.find(
-    (u) => u.email.toLowerCase() === email.toLowerCase() && u.passwordHash === password
-  );
-
-  if (!user) {
-    return res.status(401).json({ error: 'Invalid email or password' });
-  }
-
-  res.json({
-    success: true,
-    user: { id: user.id, name: user.name, email: user.email },
-    message: 'Logged in successfully',
-  });
+app.post('/api/auth/login', async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+    await ensureDemoAdmin();
+    const user = await findUserByEmail(String(email).trim().toLowerCase());
+    if (!user || !verifyPassword(String(password), user.passwordHash)) return res.status(401).json({ error: 'Invalid email or password' });
+    res.json({ success: true, user: { id: user.id, name: user.name, email: user.email }, message: 'Logged in successfully' });
+  } catch (error) { console.error('Login failed:', error); res.status(500).json({ error: 'Could not log in. Check database configuration.' }); }
 });
 
 // API: Get Leads
-app.get('/api/leads', (_req: Request, res: Response) => {
-  res.json({ leads: leadsDatabase });
+app.get('/api/leads', async (_req: Request, res: Response) => {
+  try {
+    res.json({ leads: await getStoredLeads() });
+  } catch (error) {
+    console.error('Unable to load leads:', error);
+    res.status(500).json({ error: 'Unable to load leads. Check Supabase configuration.' });
+  }
 });
 
 // API: Add Lead
-app.post('/api/leads', (req: Request, res: Response) => {
-  const { name, phone, email, product, status, note, city, address, monthlyBill, value, estimatedKw } = req.body;
-  if (!name || !phone) {
-    return res.status(400).json({ error: 'Name and phone number are required.' });
+app.post('/api/leads', async (req: Request, res: Response) => {
+  try {
+    const { name, phone, email, product, status, note, city, address, monthlyBill, value, estimatedKw } = req.body;
+    if (!name || !phone) return res.status(400).json({ error: 'Name and phone number are required.' });
+    const newLead: ServerLead = {
+      id: `lead-${Date.now()}`, name, phone,
+      email: email || 'captured@ai-agent.live',
+      product: product || 'Solar Consultation',
+      status: status || 'New',
+      note: note || 'Customer registered inquiry through voice assistant.',
+      city: city || 'Not specified', address: address || '',
+      monthlyBill: monthlyBill || '', source: 'Voice Assistant',
+      timestamp: new Date().toISOString(), value: value || 'PKR 1.2M',
+      estimatedKw: estimatedKw || 5,
+    };
+    await saveStoredLead(newLead);
+    res.status(201).json({ lead: newLead, success: true });
+  } catch (error) {
+    console.error('Unable to save lead:', error);
+    res.status(500).json({ error: 'Unable to save lead. Check Supabase configuration.' });
   }
-
-  const newLead: ServerLead = {
-    id: `lead-${Date.now()}`,
-    name,
-    phone,
-    email: email || 'captured@ai-agent.live',
-    product: product || 'Solar Consultation',
-    status: status || 'New',
-    note: note || 'Customer registered inquiry through voice assistant.',
-    city: city || 'Not specified',
-    address: address || '',
-    monthlyBill: monthlyBill || '',
-    source: 'Voice Assistant',
-    timestamp: 'Just now',
-    value: value || 'PKR 1.2M',
-    estimatedKw: estimatedKw || 5,
-  };
-
-  leadsDatabase.unshift(newLead);
-  persistLeadsToDisk();
-  res.status(201).json({ lead: newLead, success: true });
 });
 
 // API: Update Lead
-app.patch('/api/leads/:id', (req: Request, res: Response) => {
-  const { id } = req.params;
-  const leadIndex = leadsDatabase.findIndex((l) => l.id === id);
-  if (leadIndex === -1) {
-    return res.status(404).json({ error: 'Lead not found' });
+app.patch('/api/leads/:id', async (req: Request, res: Response) => {
+  try {
+    const updated = await updateStoredLead(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ error: 'Lead not found' });
+    res.json({ lead: updated, success: true });
+  } catch (error) {
+    console.error('Unable to update lead:', error);
+    res.status(500).json({ error: 'Unable to update lead.' });
   }
-
-  leadsDatabase[leadIndex] = {
-    ...leadsDatabase[leadIndex],
-    ...req.body,
-  };
-
-  persistLeadsToDisk();
-  res.json({ lead: leadsDatabase[leadIndex], success: true });
 });
 
 // API: Delete Lead
-app.delete('/api/leads/:id', (req: Request, res: Response) => {
-  const { id } = req.params;
-  leadsDatabase = leadsDatabase.filter((l) => l.id !== id);
-  persistLeadsToDisk();
-  res.json({ success: true });
+app.delete('/api/leads/:id', async (req: Request, res: Response) => {
+  try {
+    await deleteStoredLead(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Unable to delete lead:', error);
+    res.status(500).json({ error: 'Unable to delete lead.' });
+  }
 });
 
 // API: Stats
-app.get('/api/stats', (_req: Request, res: Response) => {
-  const total = leadsDatabase.length;
-  const newLeads = leadsDatabase.filter((l) => l.status === 'New').length;
-  const hotLeads = leadsDatabase.filter((l) => l.status === 'Hot').length;
-  const warmLeads = leadsDatabase.filter((l) => l.status === 'Warm').length;
-  const closedLeads = leadsDatabase.filter((l) => l.status === 'Closed').length;
-
-  res.json({
-    totalLeads: total,
-    newLeads,
-    hotLeads,
-    warmLeads,
-    closedLeads,
-    followUps: warmLeads + newLeads,
-    estimatedPipelineValue: 'PKR 11.2M',
-  });
+app.get('/api/stats', async (_req: Request, res: Response) => {
+  try {
+    const leads = await getStoredLeads();
+    const total = leads.length;
+    const newLeads = leads.filter((l) => l.status === 'New').length;
+    const hotLeads = leads.filter((l) => l.status === 'Hot').length;
+    const warmLeads = leads.filter((l) => l.status === 'Warm').length;
+    const closedLeads = leads.filter((l) => l.status === 'Closed').length;
+    res.json({ totalLeads: total, newLeads, hotLeads, warmLeads, closedLeads,
+      followUps: warmLeads + newLeads, estimatedPipelineValue: 'PKR 11.2M' });
+  } catch (error) {
+    console.error('Unable to calculate stats:', error);
+    res.status(500).json({ error: 'Unable to load dashboard statistics.' });
+  }
 });
 
 // API: Get Fine-Tuning Dataset for TinyLlama 1.1B
@@ -684,8 +738,7 @@ CORE GUIDELINES:
                     value: 'PKR 1.45M',
                     estimatedKw: leadParsed.estimatedKw || 5,
                   };
-                  leadsDatabase.unshift(newlyCapturedLead);
-                  persistLeadsToDisk();
+                  await saveStoredLead(newlyCapturedLead);
                 } catch {
                   // ignore JSON parse error
                 }
@@ -707,8 +760,7 @@ CORE GUIDELINES:
           replyText = fallback.reply;
           if (fallback.capturedLead && !newlyCapturedLead) {
             newlyCapturedLead = fallback.capturedLead;
-            leadsDatabase.unshift(newlyCapturedLead);
-            persistLeadsToDisk();
+            await saveStoredLead(newlyCapturedLead);
           }
         }
       } catch (genError) {
@@ -717,8 +769,7 @@ CORE GUIDELINES:
         replyText = fallback.reply;
         if (fallback.capturedLead && !newlyCapturedLead) {
           newlyCapturedLead = fallback.capturedLead;
-          leadsDatabase.unshift(newlyCapturedLead);
-          persistLeadsToDisk();
+          await saveStoredLead(newlyCapturedLead);
         }
       }
     } else {
@@ -726,8 +777,7 @@ CORE GUIDELINES:
       replyText = fallback.reply;
       if (fallback.capturedLead && !newlyCapturedLead) {
         newlyCapturedLead = fallback.capturedLead;
-        leadsDatabase.unshift(newlyCapturedLead);
-        persistLeadsToDisk();
+        await saveStoredLead(newlyCapturedLead);
       }
     }
 
@@ -748,8 +798,7 @@ CORE GUIDELINES:
         value: 'PKR 1.45M',
         estimatedKw: 5,
       };
-      leadsDatabase.unshift(newlyCapturedLead);
-      persistLeadsToDisk();
+      await saveStoredLead(newlyCapturedLead);
     }
 
     return res.json({
@@ -768,25 +817,17 @@ CORE GUIDELINES:
   }
 });
 
-// Mount Vite or serve static production build
-async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
+// Export the Express app for the Vercel serverless function.
+// Vercel serves the Vite build as static assets; this file handles /api routes only.
+export default app;
+
+// Local development: run Express and mount Vite middleware.
+if (process.env.VERCEL !== '1') {
+  const startServer = async () => {
     const { createServer } = await import('vite');
-    const vite = await createServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
+    const vite = await createServer({ server: { middlewareMode: true }, appType: 'spa' });
     app.use(vite.middlewares);
-  } else {
-    app.use(express.static(path.resolve(__dirname, 'dist')));
-    app.get('*', (_req: Request, res: Response) => {
-      res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
-    });
-  }
-
-  app.listen(port, '0.0.0.0', () => {
-    console.log(`AI Sales Agent server running on port ${port}`);
-  });
+    app.listen(port, '0.0.0.0', () => console.log(`AI Sales Agent running on port ${port}`));
+  };
+  startServer();
 }
-
-startServer();
